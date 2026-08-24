@@ -6,19 +6,37 @@ workflows:
     scripts:
       - name: Generate android folder
         script: flutter create .
-      - name: Enable cleartext traffic
+      - name: Configure Android network access
         script: |
-          python3 -c "
+          python3 - <<'PY'
           import re
+
           manifest = 'android/app/src/main/AndroidManifest.xml'
-          with open(manifest, 'r+') as f:
+          with open(manifest, 'r+', encoding='utf-8') as f:
               content = f.read()
+
+              # Release manifests do not inherit Flutter's debug-only INTERNET permission.
+              if 'android.permission.INTERNET' not in content:
+                  content = re.sub(
+                      r'(<manifest\b[^>]*>)',
+                      r'\1\n    <uses-permission android:name="android.permission.INTERNET" />',
+                      content,
+                      count=1,
+                  )
+
+              # The current API is HTTP. Keep this only until the API is served over HTTPS.
               if 'android:usesCleartextTraffic' not in content:
-                  content = re.sub(r'(<application[^>]*?)>', r'\1 android:usesCleartextTraffic=\"true\">', content)
-                  f.seek(0)
-                  f.write(content)
-                  f.truncate()
-          "
+                  content = re.sub(
+                      r'(<application[^>]*?)>',
+                      r'\1 android:usesCleartextTraffic="true">',
+                      content,
+                      count=1,
+                  )
+
+              f.seek(0)
+              f.write(content)
+              f.truncate()
+          PY
       - name: Build APK
         script: flutter build apk --release
     artifacts:
