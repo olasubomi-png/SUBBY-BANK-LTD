@@ -36,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load data')));
     }
   }
 
@@ -48,12 +48,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final api = ApiService();
     try {
       await api.transfer(phone, receiver, amount);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transfer sent: ₦$amount')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('₦$amount sent to $receiver'), backgroundColor: Colors.green),
+      );
       _receiverController.clear();
       _amountController.clear();
       _loadData();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transfer failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transfer failed'), backgroundColor: Colors.red));
     }
   }
 
@@ -64,15 +66,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFF0B1A2D),
       appBar: AppBar(
-        title: Text('SUBBY Bank'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text('SUBBY Bank', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(icon: Icon(Icons.card_membership, color: Colors.white), onPressed: _goToCard),
           IconButton(
-            icon: Icon(Icons.card_membership),
-            onPressed: _goToCard,
-          ),
-          IconButton(
-            icon: Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
               await Provider.of<AuthProvider>(context, listen: false).logout();
               Navigator.pushReplacementNamed(context, '/');
@@ -82,50 +84,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
+        color: Colors.cyanAccent,
         child: _loading
             ? Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
                 physics: AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Balance Card
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF00C9FF), Color(0xFF92FE9D)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(color: Colors.cyanAccent.withOpacity(0.4), blurRadius: 20, offset: Offset(0, 10)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Total Balance', style: TextStyle(fontSize: 16, color: Colors.black45)),
+                          SizedBox(height: 8),
+                          Text(
+                            '₦${_balance.toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 30),
+
+                    // Send Money Section
+                    Text('Send Money', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                    SizedBox(height: 12),
                     Card(
-                      color: Colors.green[900],
+                      color: Colors.white.withOpacity(0.06),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: Padding(
-                        padding: EdgeInsets.all(20),
+                        padding: EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            Text('Balance', style: TextStyle(fontSize: 16, color: Colors.white70)),
-                            SizedBox(height: 4),
-                            Text('₦${_balance.toStringAsFixed(2)}', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+                            TextField(
+                              controller: _receiverController,
+                              style: TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'Receiver Phone',
+                                labelStyle: TextStyle(color: Colors.white54),
+                                prefixIcon: Icon(Icons.person, color: Colors.cyanAccent),
+                                border: UnderlineInputBorder(),
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            TextField(
+                              controller: _amountController,
+                              style: TextStyle(color: Colors.white),
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Amount (₦)',
+                                labelStyle: TextStyle(color: Colors.white54),
+                                prefixIcon: Icon(Icons.money, color: Colors.cyanAccent),
+                                border: UnderlineInputBorder(),
+                              ),
+                            ),
+                            SizedBox(height: 20),
+                            ElevatedButton.icon(
+                              onPressed: _sendMoney,
+                              icon: Icon(Icons.send),
+                              label: Text('Send Fake Transfer'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.cyanAccent,
+                                foregroundColor: Colors.black,
+                                minimumSize: Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
-                    SizedBox(height: 16),
-                    Text('Send Money', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    TextField(
-                      controller: _receiverController,
-                      decoration: InputDecoration(labelText: 'Receiver Phone'),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    TextField(
-                      controller: _amountController,
-                      decoration: InputDecoration(labelText: 'Amount (₦)'),
-                      keyboardType: TextInputType.number,
-                    ),
+                    SizedBox(height: 30),
+
+                    // Transaction History
+                    Text('Transaction History', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                     SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      onPressed: _sendMoney,
-                      icon: Icon(Icons.send),
-                      label: Text('Send Fake Transfer'),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                    ),
-                    SizedBox(height: 16),
-                    Text('Transaction History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     _history.isEmpty
-                        ? Text('No transactions yet.')
+                        ? Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Text('No transactions yet.', style: TextStyle(color: Colors.white38)),
+                            ),
+                          )
                         : ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -135,11 +191,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               final isCredit = tx['sender_phone'] != Provider.of<AuthProvider>(context, listen: false).phone;
                               final color = isCredit ? Colors.green : Colors.red;
                               final amount = (tx['amount'] ?? 0).toDouble();
-                              return ListTile(
-                                leading: Icon(isCredit ? Icons.arrow_downward : Icons.arrow_upward, color: color),
-                                title: Text(isCredit ? 'From ${tx['sender_phone']}' : 'To ${tx['receiver_phone']}'),
-                                subtitle: Text('Status: ${tx['status']}'),
-                                trailing: Text('₦${amount.toStringAsFixed(2)}', style: TextStyle(color: color)),
+                              return Card(
+                                color: Colors.white.withOpacity(0.04),
+                                margin: EdgeInsets.symmetric(vertical: 6),
+                                child: ListTile(
+                                  leading: Icon(
+                                    isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                                    color: color,
+                                  ),
+                                  title: Text(
+                                    isCredit ? 'From ${tx['sender_phone']}' : 'To ${tx['receiver_phone']}',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  subtitle: Text(
+                                    'Status: ${tx['status']}',
+                                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                                  ),
+                                  trailing: Text(
+                                    '₦${amount.toStringAsFixed(2)}',
+                                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
                               );
                             },
                           ),
