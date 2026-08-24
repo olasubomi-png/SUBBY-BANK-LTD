@@ -8,8 +8,14 @@ workflows:
         script: flutter create .
       - name: Enable cleartext traffic
         script: |
-          sed -i 's|<application>|<application android:usesCleartextTraffic="true">|' android/app/src/main/AndroidManifest.xml
-          sed -i 's|<application |<application android:usesCleartextTraffic="true" |' android/app/src/main/AndroidManifest.xml
+          python3 -c "
+          import re
+          with open('android/app/src/main/AndroidManifest.xml', 'r') as f:
+              content = f.read()
+          content = re.sub(r'<application([^>]*)>', r'<application\1 android:usesCleartextTraffic=\"true\">', content)
+          with open('android/app/src/main/AndroidManifest.xml', 'w') as f:
+              f.write(content)
+          "
       - name: Build APK
         script: flutter build apk --release
     artifacts:
