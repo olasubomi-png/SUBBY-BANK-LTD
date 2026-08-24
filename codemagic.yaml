@@ -6,9 +6,34 @@ workflows:
     scripts:
       - name: Generate android folder
         script: flutter create .
-      - name: Enable cleartext traffic
+      - name: Enable cleartext traffic with Python
         script: |
-          perl -i -pe 's/<application(.*?)>/<application$1 android:usesCleartextTraffic="true">/g' android/app/src/main/AndroidManifest.xml
+          python3 -c "
+          import re, os
+          manifest = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest, 'r') as f:
+              content = f.read()
+          # Insert android:usesCleartextTraffic="true" into the application tag
+          content = re.sub(r'<application([^>]*)>', r'<application\1 android:usesCleartextTraffic="true">', content)
+          with open(manifest, 'w') as f:
+              f.write(content)
+          # Create network_security_config.xml
+          os.makedirs('android/app/src/main/res/xml', exist_ok=True)
+          with open('android/app/src/main/res/xml/network_security_config.xml', 'w') as f:
+              f.write('''<?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <domain-config cleartextTrafficPermitted="true">
+                  <domain includeSubdomains="true">54.167.96.219</domain>
+              </domain-config>
+          </network-security-config>''')
+          # Reference it in the manifest (if not already)
+          with open(manifest, 'r') as f:
+              content = f.read()
+          if 'networkSecurityConfig' not in content:
+              content = re.sub(r'<application([^>]*)>', r'<application\1 android:networkSecurityConfig="@xml/network_security_config">', content)
+          with open(manifest, 'w') as f:
+              f.write(content)
+          "
       - name: Build APK
         script: flutter build apk --release
     artifacts:
