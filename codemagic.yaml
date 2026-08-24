@@ -4,8 +4,10 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Generate android folder
-        script: flutter create .
+      - name: Generate android folder and enable cleartext
+        script: |
+          flutter create .
+          sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
       - name: Build APK
         script: flutter build apk --release
     artifacts:
