@@ -13,13 +13,26 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> lookupAccount(String accountNumber) async {
+  Future<Map<String, dynamic>> lookupAccount(
+    String accountNumber, {
+    String? bankName,
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/lookup_account'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'account_number': accountNumber}),
+      body: jsonEncode({
+        'account_number': accountNumber,
+        if (bankName != null && bankName.isNotEmpty) 'bank_name': bankName,
+      }),
     );
-    return jsonDecode(response.body);
+    final decoded = jsonDecode(response.body);
+    final body = decoded is Map<String, dynamic>
+        ? decoded
+        : <String, dynamic>{};
+    if (response.statusCode != 200) {
+      throw Exception(body['error'] ?? 'Account not found');
+    }
+    return body;
   }
 
   Future<Map<String, dynamic>> transfer(

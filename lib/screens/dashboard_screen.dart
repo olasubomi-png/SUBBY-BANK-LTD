@@ -50,6 +50,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadData();
   }
 
+  double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String _recipientPhone(Map<String, dynamic> result) {
+    return (result['phone'] ??
+            result['account_phone'] ??
+            result['receiver_phone'] ??
+            '')
+        .toString();
+  }
+
+  String _recipientName(Map<String, dynamic> result) {
+    return (result['account_name'] ??
+            result['accountName'] ??
+            result['name'] ??
+            result['full_name'] ??
+            result['customer_name'] ??
+            '')
+        .toString();
+  }
+
   Future<void> _loadData() async {
     setState(() => _loading = true);
     final phone = Provider.of<AuthProvider>(context, listen: false).phone!;
@@ -59,10 +82,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final historyData = await api.getHistory(phone);
       final dailyData = await api.getDailyUsage(phone);
       setState(() {
-        _balance = (balanceData['balance'] ?? 0).toDouble();
-        _history = historyData;
-        _dailyUsed = (dailyData['used'] ?? 0).toDouble();
-        _dailyLimit = (dailyData['limit'] ?? 500000).toDouble();
+        _balance = _asDouble(balanceData['balance']);
+        _history = historyData
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+        _dailyUsed = _asDouble(dailyData['used']);
+        _dailyLimit = _asDouble(dailyData['limit']);
+        if (_dailyLimit <= 0) _dailyLimit = 500000;
         _loading = false;
       });
     } catch (e) {
@@ -73,19 +100,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _lookupAccount() async {
     final account = _accountController.text.trim();
-    if (account.isEmpty) return;
+    if (!RegExp(r'^\d{10}$').hasMatch(account)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Enter a valid 10-digit account number'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     setState(() => _isLookingUp = true);
     final api = ApiService();
     try {
-      final result = await api.lookupAccount(account);
+      final result = await api.lookupAccount(
+        account,
+        bankName: _selectedBank,
+      );
+      final recipientPhone = _recipientPhone(result);
+      final recipientName = _recipientName(result);
+      if (recipientPhone.isEmpty || recipientName.isEmpty) {
+        throw Exception(
+          'The bank service did not return an account-holder name. '
+          'Real bank verification must be configured on the server.',
+        );
+      }
       setState(() {
-        _lookupResult = result;
+        _lookupResult = {
+          ...result,
+          'account_number': account,
+          'bank_name': _selectedBank,
+        };
         _isLookingUp = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Account found: ${result['phone']}'), backgroundColor: Colors.green));
+      final label = recipientName.isEmpty
+          ? recipientPhone
+          : '$recipientName ($recipientPhone)';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Verified account: $label'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       setState(() => _isLookingUp = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Account not found'), backgroundColor: Colors.red));
+      final message = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -99,12 +160,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final phone = Provider.of<AuthProvider>(context, listen: false).phone!;
     final api = ApiService();
     try {
-      await api.transfer(phone, _lookupResult!['phone'], amount, _selectedBank);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('₦$amount sent to ${_lookupResult!['phone']} ($_selectedBank)'), backgroundColor: Colors.green));
+      final receiverPhone = _recipientPhone(_lookupResult!);
+      await api.transfer(phone, receiverPhone, amount, _selectedBank);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('₦$amount sent to $receiverPhone ($_selectedBank)'),
+          backgroundColor: Colors.green,
+        ),
+      );
       _accountController.clear();
       _amountController.clear();
       setState(() => _lookupResult = null);
-      _loadData();
+      await _loadData();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transfer failed: $e'), backgroundColor: Colors.red));
     }
@@ -270,8 +337,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Sending to: ${_lookupResult!['phone']} ($_selectedBank)',
-                                        style: TextStyle(color: Colors.white),
+                                    () {
+                                      final name = _recipientName(_lookupResult!);
+                                      final phone = _recipientPhone(_lookupResult!);
+                                      final account = _lookupResult!['account_number']?.toString() ?? '';
+                                      final identity = name.isEmpty ? phone : '$name\n$phone';
+                                      return 'Verified recipient\n$identity\n$account ($_selectedBank)';
+                                    }(),
+                                    style: TextStyle(color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -326,7 +399,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               final tx = _history[index];
                               final isCredit = tx['sender_phone'] != Provider.of<AuthProvider>(context, listen: false).phone;
                               final color = isCredit ? Colors.green : Colors.red;
-                              final amount = (tx['amount'] ?? 0).toDouble();
+                              final amount = _asDouble(tx['amount']);
                               final bankName = tx['bank_name'] ?? '';
                               return Card(
                                 color: Colors.white.withOpacity(0.04),

@@ -18,12 +18,34 @@ class ReceiptScreen extends StatelessWidget {
     required this.receiverPhone,
   }) : super(key: key);
 
+  double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  DateTime _createdAt() {
+    final parsed = DateTime.tryParse(transaction['created_at']?.toString() ?? '');
+    return parsed ?? DateTime.now();
+  }
+
+  String _recipientName() {
+    return (transaction['account_name'] ??
+            transaction['accountName'] ??
+            transaction['name'] ??
+            transaction['full_name'] ??
+            transaction['customer_name'] ??
+            '')
+        .toString();
+  }
+
   Future<void> _downloadReceipt() async {
     final pdf = pw.Document();
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
-    final amount = (transaction['amount'] ?? 0).toDouble();
-    final status = transaction['status'] ?? 'pending';
-    final bankName = transaction['bank_name'] ?? '';
+    final amount = _asDouble(transaction['amount']);
+    final status = transaction['status']?.toString() ?? 'pending';
+    final bankName = transaction['bank_name']?.toString() ?? '';
+    final recipientName = _recipientName();
+    final accountNumber = transaction['account_number']?.toString() ?? '';
 
     pdf.addPage(
       pw.Page(
@@ -34,9 +56,11 @@ class ReceiptScreen extends StatelessWidget {
             pw.SizedBox(height: 20),
             pw.Text('Transaction Receipt'),
             pw.SizedBox(height: 10),
-            pw.Text('Date: ${dateFormat.format(DateTime.parse(transaction['created_at']))}'),
+            pw.Text('Date: ${dateFormat.format(_createdAt())}'),
             pw.Text('Status: $status'),
-            pw.Text('Bank: $bankName'),
+            if (bankName.isNotEmpty) pw.Text('Bank: $bankName'),
+            if (accountNumber.isNotEmpty) pw.Text('Account number: $accountNumber'),
+            if (recipientName.isNotEmpty) pw.Text('Recipient name: $recipientName'),
             pw.Divider(),
             pw.Text('Sender: $senderPhone'),
             pw.Text('Receiver: $receiverPhone'),
@@ -49,18 +73,23 @@ class ReceiptScreen extends StatelessWidget {
     );
 
     final bytes = await pdf.save();
-    final tempFile = File('${Directory.systemTemp.path}/receipt.pdf');
-    await tempFile.writeAsBytes(bytes);
-    await Share.shareXFiles([XFile(tempFile.path)], text: 'Here is your receipt from SUBBY Bank.');
+    final tempFile = File('${Directory.systemTemp.path}/subby_bank_receipt.pdf');
+    await tempFile.writeAsBytes(bytes, flush: true);
+    await Share.shareXFiles(
+      [XFile(tempFile.path, mimeType: 'application/pdf')],
+      text: 'Here is your receipt from SUBBY Bank.',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
-    final amount = (transaction['amount'] ?? 0).toDouble();
-    final status = transaction['status'] ?? 'pending';
-    final bankName = transaction['bank_name'] ?? '';
-    final isCredit = transaction['sender_phone'] != senderPhone;
+    final amount = _asDouble(transaction['amount']);
+    final status = transaction['status']?.toString() ?? 'pending';
+    final bankName = transaction['bank_name']?.toString() ?? '';
+    final recipientName = _recipientName();
+    final accountNumber = transaction['account_number']?.toString() ?? '';
+    final isCredit = transaction['sender_phone']?.toString() != senderPhone;
 
     return Scaffold(
       appBar: AppBar(title: Text('Receipt')),
@@ -73,12 +102,14 @@ class ReceiptScreen extends StatelessWidget {
             SizedBox(height: 20),
             Text('Transaction Receipt', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
             SizedBox(height: 10),
-            _infoRow('Date', dateFormat.format(DateTime.parse(transaction['created_at']))),
+            _infoRow('Date', dateFormat.format(_createdAt())),
             _infoRow('Status', status.toUpperCase()),
             if (bankName.isNotEmpty) _infoRow('Bank', bankName),
+            if (accountNumber.isNotEmpty) _infoRow('Account', accountNumber),
+            if (recipientName.isNotEmpty) _infoRow('Recipient name', recipientName),
             Divider(color: Colors.white38),
-            _infoRow('Sender', isCredit ? 'You' : transaction['sender_phone']),
-            _infoRow('Receiver', isCredit ? transaction['receiver_phone'] : 'You'),
+            _infoRow('Sender', isCredit ? 'You' : transaction['sender_phone']?.toString() ?? ''),
+            _infoRow('Receiver', isCredit ? transaction['receiver_phone']?.toString() ?? '' : 'You'),
             _infoRow('Amount', '₦${amount.toStringAsFixed(2)}', isBold: true),
             Divider(color: Colors.white38),
             SizedBox(height: 20),
@@ -106,12 +137,15 @@ class ReceiptScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(color: Colors.white70, fontSize: 16)),
-          Text(
-            value,
-            style: TextStyle(
-              color: isBold ? Colors.cyanAccent : Colors.white,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              fontSize: 16,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: isBold ? Colors.cyanAccent : Colors.white,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                fontSize: 16,
+              ),
             ),
           ),
         ],
