@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import 'card_screen.dart';
+import 'payment_screen.dart'; // optional
 
 const List<String> nigerianBanks = [
   'Access Bank',
@@ -110,6 +111,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _goToCard() {
     Navigator.push(context, MaterialPageRoute(builder: (context) => CardScreen()));
+  }
+
+  void _goToPayment() {
+    // Optionally navigate to payment screen – we'll add a button in app bar or card screen
   }
 
   @override
