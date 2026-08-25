@@ -22,7 +22,12 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> transfer(String senderPhone, String receiverPhone, double amount, String bankName) async {
+  Future<Map<String, dynamic>> transfer(
+    String senderPhone,
+    String receiverPhone,
+    double amount,
+    String bankName,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/transfer'),
       headers: {'Content-Type': 'application/json'},
@@ -58,5 +63,14 @@ class ApiService {
   Future<Map<String, dynamic>> getDailyUsage(String phone) async {
     final response = await http.get(Uri.parse('$baseUrl/api/daily_usage?phone=$phone'));
     return jsonDecode(response.body);
+  }
+
+  // Save FCM token after login (already does in register, but we keep for clarity)
+  Future<void> saveFcmToken(String phone, String token) async {
+    await http.post(
+      Uri.parse('$baseUrl/api/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'phone': phone, 'fcm_token': token}),
+    );
   }
 }
