@@ -38,11 +38,18 @@ class ApiService {
         'bank_name': bankName,
       }),
     );
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(body['error'] ?? 'Transfer failed');
+    }
+    return body;
   }
 
   Future<List<dynamic>> getHistory(String phone) async {
     final response = await http.get(Uri.parse('$baseUrl/api/history?phone=$phone'));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch history');
+    }
     return jsonDecode(response.body);
   }
 
@@ -57,20 +64,17 @@ class ApiService {
 
   Future<Map<String, dynamic>> getBalance(String phone) async {
     final response = await http.get(Uri.parse('$baseUrl/api/balance?phone=$phone'));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch balance');
+    }
     return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> getDailyUsage(String phone) async {
     final response = await http.get(Uri.parse('$baseUrl/api/daily_usage?phone=$phone'));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch daily usage');
+    }
     return jsonDecode(response.body);
-  }
-
-  // Save FCM token after login (already does in register, but we keep for clarity)
-  Future<void> saveFcmToken(String phone, String token) async {
-    await http.post(
-      Uri.parse('$baseUrl/api/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'phone': phone, 'fcm_token': token}),
-    );
   }
 }
