@@ -13,45 +13,53 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  late WebViewController controller;
+  late final WebViewController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (url) {
+            controller.runJavaScript('''
+              // Example: fill fields with IDs 'card_number', 'cvv', 'expiry'
+              document.getElementById('card_number').value = '${widget.cardNumber}';
+              document.getElementById('cvv').value = '${widget.cvv}';
+              document.getElementById('expiry').value = '${widget.expiry}';
+            ''');
+          },
+          onNavigationRequest: (request) {
+            // Intercept failure and show success for this simulation.
+            if (request.url.contains('payment_failed')) {
+              showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: Text('Payment Successful'),
+                  content: Text('Your card was charged successfully (simulated).'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse('https://example.com/payment'));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Pay with Card')),
-      body: WebView(
-        initialUrl: 'https://example.com/payment', // Replace with your test payment page
-        onWebViewCreated: (ctrl) => controller = ctrl,
-        onPageFinished: (url) {
-          // Autofill card details
-          controller.runJavaScript('''
-            // Example: fill fields with IDs 'card_number', 'cvv', 'expiry'
-            document.getElementById('card_number').value = '${widget.cardNumber}';
-            document.getElementById('cvv').value = '${widget.cvv}';
-            document.getElementById('expiry').value = '${widget.expiry}';
-          ''');
-        },
-        navigationDelegate: (nav) {
-          // Intercept failure and show success
-          if (nav.url.contains('payment_failed')) {
-            showDialog(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: Text('Payment Successful'),
-                content: Text('Your card was charged successfully (simulated).'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('OK'),
-                  ),
-                ],
-              ),
-            );
-            return NavigationDecision.prevent;
-          }
-          return NavigationDecision.navigate;
-        },
-      ),
+      body: WebViewWidget(controller: controller),
     );
   }
 }
