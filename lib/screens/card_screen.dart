@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
+import 'payment_screen.dart';
 
 class CardScreen extends StatefulWidget {
   @override
@@ -26,6 +27,11 @@ class _CardScreenState extends State<CardScreen> {
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to generate card'), backgroundColor: Colors.red));
     }
+  }
+
+  void _copyCardNumber(String number) {
+    Clipboard.setData(ClipboardData(text: number));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Card number copied')));
   }
 
   @override
@@ -60,10 +66,19 @@ class _CardScreenState extends State<CardScreen> {
                         ],
                       ),
                       SizedBox(height: 24),
-                      // Full card number (no hiding)
-                      Text(
-                        _card!['card_number'],
-                        style: TextStyle(fontSize: 24, letterSpacing: 2, color: Colors.white),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _card!['card_number'],
+                              style: TextStyle(fontSize: 24, letterSpacing: 2, color: Colors.white),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.copy, color: Colors.white70),
+                            onPressed: () => _copyCardNumber(_card!['card_number']),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 16),
                       Row(
@@ -72,6 +87,27 @@ class _CardScreenState extends State<CardScreen> {
                           SizedBox(width: 24),
                           Text('Exp: ${_card!['expiry']}', style: TextStyle(color: Colors.white70, fontSize: 16)),
                         ],
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Navigate to payment simulation
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PaymentScreen(
+                                cardNumber: _card!['card_number'],
+                                cvv: _card!['cvv'],
+                                expiry: _card!['expiry'],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text('Try Card Payment (Simulation)'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.black,
+                        ),
                       ),
                     ],
                   ),
