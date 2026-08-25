@@ -66,6 +66,22 @@ workflows:
               f.write(content)
               f.truncate()
           PY
+      - name: Configure Android compile SDK
+        script: |
+          if [ -f android/app/build.gradle.kts ]; then
+            gradle_file=android/app/build.gradle.kts
+          elif [ -f android/app/build.gradle ]; then
+            gradle_file=android/app/build.gradle
+          else
+            echo 'Android app Gradle file not found'
+            exit 1
+          fi
+
+          sed -i -E \
+            -e 's/compileSdk[[:space:]]*=[[:space:]]*flutter\.compileSdkVersion/compileSdk = 36/' \
+            -e 's/compileSdk[[:space:]]+flutter\.compileSdkVersion/compileSdk 36/' \
+            "$gradle_file"
+          grep -Eq 'compileSdk[[:space:]]*(=[[:space:]]*)?36' "$gradle_file"
       - name: Build APK
         script: flutter build apk --release
     artifacts:
