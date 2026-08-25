@@ -129,9 +129,17 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       final api = ApiService();
-      // First, get the FCM token
-      String? token = await FirebaseMessaging.instance.getToken();
-      if (token == null) token = 'dummy_fcm';
+      // Use Firebase Messaging when configured, otherwise keep registration working
+      // with the existing fallback token for builds without Firebase setup.
+      String token = 'dummy_fcm';
+      try {
+        final firebaseToken = await FirebaseMessaging.instance.getToken();
+        if (firebaseToken != null && firebaseToken.isNotEmpty) {
+          token = firebaseToken;
+        }
+      } catch (_) {
+        // Firebase is optional for this build; continue with the fallback token.
+      }
       // Register/update user with token
       await api.register(phone, token);
       await Provider.of<AuthProvider>(context, listen: false).login(phone);
