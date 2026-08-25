@@ -60,7 +60,7 @@ class _CardScreenState extends State<CardScreen> {
                         ],
                       ),
                       SizedBox(height: 24),
-                      // Full card number (not hidden)
+                      // Full card number (no hiding)
                       Text(
                         _card!['card_number'],
                         style: TextStyle(fontSize: 24, letterSpacing: 2, color: Colors.white),
