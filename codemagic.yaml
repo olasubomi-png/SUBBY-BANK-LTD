@@ -6,6 +6,29 @@ workflows:
     scripts:
       - name: Generate android folder
         script: flutter create .
+      - name: Configure branded launch screen
+        script: |
+          mkdir -p android/app/src/main/res/drawable-nodpi android/app/src/main/res/values
+          cp assets/images/logo.png android/app/src/main/res/drawable-nodpi/subby_bank_logo.png
+          cat > android/app/src/main/res/values/subby_bank_colors.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="subby_bank_splash_background">#06101e</color>
+          </resources>
+          XML
+          for resource_dir in drawable drawable-v21; do
+            cat > "android/app/src/main/res/$resource_dir/launch_background.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@color/subby_bank_splash_background" />
+              <item>
+                  <bitmap
+                      android:gravity="center"
+                      android:src="@drawable/subby_bank_logo" />
+              </item>
+          </layer-list>
+          XML
+          done
       - name: Configure Android network access
         script: |
           python3 - <<'PY'
