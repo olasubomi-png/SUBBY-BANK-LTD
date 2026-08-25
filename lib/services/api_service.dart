@@ -54,4 +54,9 @@ class ApiService {
     final response = await http.get(Uri.parse('$baseUrl/api/balance?phone=$phone'));
     return jsonDecode(response.body);
   }
+
+  Future<Map<String, dynamic>> getDailyUsage(String phone) async {
+    final response = await http.get(Uri.parse('$baseUrl/api/daily_usage?phone=$phone'));
+    return jsonDecode(response.body);
+  }
 }
