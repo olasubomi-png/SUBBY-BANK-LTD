@@ -24,7 +24,7 @@ class _CardScreenState extends State<CardScreen> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to generate card')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to generate card'), backgroundColor: Colors.red));
     }
   }
 
@@ -60,8 +60,9 @@ class _CardScreenState extends State<CardScreen> {
                         ],
                       ),
                       SizedBox(height: 24),
+                      // Full card number (not hidden)
                       Text(
-                        '**** **** **** ${_card!['card_number'].toString().substring(12)}',
+                        _card!['card_number'],
                         style: TextStyle(fontSize: 24, letterSpacing: 2, color: Colors.white),
                       ),
                       SizedBox(height: 16),
