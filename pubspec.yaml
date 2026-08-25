@@ -13,6 +13,8 @@ dependencies:
   provider: ^6.0.5
   shared_preferences: ^2.2.2
   intl: ^0.18.1
+  firebase_messaging: ^15.0.0
+  webview_flutter: ^4.4.0
 
 dev_dependencies:
   flutter_test:
@@ -22,4 +24,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - grok_1787591992980.jpg   # ← change this to your exact filename
+    - assets/images/logo.png   # change to your logo filename if needed
