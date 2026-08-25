@@ -13,7 +13,16 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> transfer(String senderPhone, String receiverPhone, double amount) async {
+  Future<Map<String, dynamic>> lookupAccount(String accountNumber) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/lookup_account'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'account_number': accountNumber}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> transfer(String senderPhone, String receiverPhone, double amount, String bankName) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/transfer'),
       headers: {'Content-Type': 'application/json'},
@@ -21,6 +30,7 @@ class ApiService {
         'sender_phone': senderPhone,
         'receiver_phone': receiverPhone,
         'amount': amount,
+        'bank_name': bankName,
       }),
     );
     return jsonDecode(response.body);
