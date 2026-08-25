@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 
@@ -128,7 +129,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       final api = ApiService();
-      await api.register(phone, 'dummy_fcm');
+      // First, get the FCM token
+      String? token = await FirebaseMessaging.instance.getToken();
+      if (token == null) token = 'dummy_fcm';
+      // Register/update user with token
+      await api.register(phone, token);
       await Provider.of<AuthProvider>(context, listen: false).login(phone);
       Navigator.pushReplacementNamed(context, '/dashboard');
     } catch (e) {
